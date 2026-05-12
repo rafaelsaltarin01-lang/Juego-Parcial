@@ -1,0 +1,138 @@
+from abc import ABC, abstractmethod
+import random
+
+# Uso ABC para que nadie pueda crear un "Personaje" vacio, es solo el molde
+class Personaje(ABC):
+    def __init__(self, nombre, vida, ataque, defensa):
+        # Pongo doble guion bajo para que los atributos sean privados
+        self.__nombre = nombre
+        self.__vida = vida
+        self.__ataque = ataque
+        self.__defensa = defensa
+
+    # Metodos para entrar a los datos privados 
+    def get_nombre(self): return self.__nombre
+    def get_vida(self): return self.__vida
+    
+    # El setter de vida asegura que nunca sea menor a cero
+    def set_vida(self, valor): self.__vida = max(0, valor)
+    
+    def get_ataque(self): return self.__ataque
+    def get_defensa(self): return self.__defensa
+
+    def esta_vivo(self):
+        return self.__vida > 0
+
+    # Este metodo es obligatorio para todos los hijos
+    @abstractmethod
+    def atacar(self, objetivo):
+        pass
+
+
+class Guerrero(Personaje):
+    def atacar(self, objetivo):
+        # El guerrero pega mas fuerte por su bono de +5
+        dano = (self.get_ataque() + 5) - objetivo.get_defensa()
+        dano = max(0, dano) # Si el daño es negativo, lo dejamos en 0
+        objetivo.set_vida(objetivo.get_vida() - dano)
+        print(f"🗡️  {self.get_nombre()} lanza un TAJO MORTAL: -{dano} HP")
+
+class Mago(Personaje):
+    def atacar(self, objetivo):
+        # El mago es bueno contra armaduras porque ignora la mitad de la defensa
+        dano = self.get_ataque() - (objetivo.get_defensa() // 2)
+        dano = max(0, dano)
+        objetivo.set_vida(objetivo.get_vida() - dano)
+        print(f"✨ {self.get_nombre()} lanza una RÁFAGA ARCANA: -{dano} HP")
+
+class Arquero(Personaje):
+    def atacar(self, objetivo):
+        # Calculo si sale golpe critico (30% de probabilidad)
+        critico = 2 if random.random() < 0.3 else 1
+        dano = (self.get_ataque() * critico) - objetivo.get_defensa()
+        dano = max(0, dano)
+        objetivo.set_vida(objetivo.get_vida() - dano)
+        msg = "¡GOLPE CRÍTICO! 🎯" if critico > 1 else "Flecha certera"
+        print(f"🏹 {self.get_nombre()} lanza {msg}: -{dano} HP")
+
+# Esta clase es la que maneja toda la pelea
+class Batalla:
+    def __init__(self, heroe, enemigo):
+        self.heroe = heroe
+        self.enemigo = enemigo
+        self.turno = 1
+
+    def iniciar(self):
+        print(f"\n" + "X" * 45)
+        print(f"⚔️  DUELO DE DESTINOS: {self.heroe.get_nombre()} vs {self.enemigo.get_nombre()} ⚔️")
+        print("X" * 45)
+        
+        # El bucle sigue mientras los dos esten vivos
+        while self.heroe.esta_vivo() and self.enemigo.esta_vivo():
+            # Puse este input para que el juego no pase volando y se pueda leer
+            input(f"\n>>> [TURNO {self.turno}] Presiona Enter para continuar...")
+            
+            # Primero ataca el jugador
+            self.heroe.atacar(self.enemigo)
+            
+            # Si el enemigo no murio, entonces el responde
+            if self.enemigo.esta_vivo():
+                self.enemigo.atacar(self.heroe)
+            
+            print(f"\nESTADO ACTUAL:")
+            print(f"   {self.heroe.get_nombre()}: {self.heroe.get_vida()} HP")
+            print(f"   {self.enemigo.get_nombre()}: {self.enemigo.get_vida()} HP")
+            self.turno += 1
+            
+        print("\n" + "="*45)
+        # Reviso quien gano para poner el mensaje final
+        if self.heroe.esta_vivo():
+            print(f"✨ ¡LA LUZ HA PREVALECIDO! ✨")
+            print(f"Felicidades, {self.heroe.get_nombre().upper()}. Has derrotado a la sombra.")
+        else:
+            print(f"🌑 ¡LA OSCURIDAD HA PREVALECIDO... 🌑")
+            print(f"{self.enemigo.get_nombre()} ha consumido tu luz.")
+        print("="*45)
+
+# Funcion para que el enemigo salga al azar
+def generar_alter_ego():
+    opciones = [
+        ("Guerrero Sombrío", Guerrero, 120, 18, 14),
+        ("Mago Tenebroso", Mago, 80, 24, 7),
+        ("Arquero Oscuro", Arquero, 95, 21, 9)
+    ]
+    # Elijo una de las tuplas de arriba aleatoriamente
+    nombre, clase, vida, atk, df = random.choice(opciones)
+    return clase(nombre, vida, atk, df)
+
+def main():
+    print("\n" + "🏰 GUARDIANS OF THE ANCIENT KINGDOM 🏰")
+    user_name = input("Introduce tu nombre de héroe: ")
+    
+    # Tabla de estadisticas para que el usuario sepa que elegir
+    print("\n--- SELECCIÓN DE CLASE ---")
+    print(f"{'#':<2} | {'CLASE':<10} | {'HP':<4} | {'ATK':<4} | {'DEF':<4} | {'HABILIDAD'}")
+    print("-" * 65)
+    print(f"1  | Guerrero   | 120  | 20   | 15   | +5 Daño Fijo")
+    print(f"2  | Mago       | 80   | 25   | 8    | Ignora 50% Defensa")
+    print(f"3  | Arquero    | 95   | 22   | 10   | 30% Prob. Crítico (x2)")
+    
+    opcion = input("\nElige tu clase (1-3): ")
+
+    # Instancio la clase que el usuario eligio
+    if opcion == "1":
+        heroe = Guerrero(user_name, 120, 20, 15)
+    elif opcion == "2":
+        heroe = Mago(user_name, 80, 25, 8)
+    else:
+        heroe = Arquero(user_name, 95, 22, 10)
+
+    # Genero al oponente
+    enemigo = generar_alter_ego()
+
+    # Arranco la batalla
+    partida = Batalla(heroe, enemigo)
+    partida.iniciar()
+
+if __name__ == "__main__":
+    main()
